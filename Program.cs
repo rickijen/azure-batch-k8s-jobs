@@ -29,10 +29,11 @@ namespace batch_k8s_jobs
         private const int TaskCount = 5;
         private const int PoolDedicatedNodeCount = 1; // Number of Dedicated VM nodes
         private const int PoolSpotNodeCount = 1; // Number of Spot VM nodes
-        private const string PoolVMSize = "STANDARD_D2_V3";
+        private const string PoolVMSizeSmall = "STANDARD_D2_V3";
         
         // Pool SKU
         private const string PoolId = PoolIdSmall;
+        private const string PoolVMSize = PoolVMSizeSmall;
         
         static void Main()
         {
