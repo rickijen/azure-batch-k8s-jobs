@@ -16,16 +16,19 @@ namespace batch_k8s_jobs
         private const string BatchAccountKey = "QY3GY9dg60q04soQZnE7ivXL8XlDn66e+HUU3RncPeSHxiT2ssrN/P8de1EPMYWO57nk7G933dHr8rKP06NmIg==";
         private const string BatchAccountUrl = "https://batchtes01.westus2.batch.azure.com";
 
-        // Storage account credentials
+        // Storage account credentials, Storage for INPUT/OUTPUT files.
         private const string StorageAccountName = "samydata";
         private const string StorageAccountKey = "DEniUJ/IWnPlUByum4tPHyAslsKW1IZfFcSw/p5oVJPYgVvWVbERYRWyyWPg+SyfrReV0+gYamIu5EgXIcIGLw==";
 
         // Batch resource settings
-        private const string PoolId = "TES-BATCH-POOL-01";
+        private const string PoolIdSmall = "TES-BATCH-POOL-SMALL";
+        private const string PoolIdMeduim = "TES-BATCH-POOL-MEDIUM";
+        private const string PoolIdLarge = "TES-BATCH-POOL-LARGE";
+        private const string PoolIdFPGA = "TES-BATCH-POOL-FPGA";
         private const string JobId = "TES-NO-DRAGEN-JOB-15";
         private const int TaskCount = 5;
-        private const int PoolDedicatedNodeCount = 1;
-        private const int PoolSpotNodeCount = 1;
+        private const int PoolDedicatedNodeCount = 1; // Number of Dedicated VM nodes
+        private const int PoolSpotNodeCount = 1; // Number of Spot VM nodes
         private const string PoolVMSize = "STANDARD_D2_V3";
         
         static void Main()
@@ -67,14 +70,14 @@ namespace batch_k8s_jobs
                         // Job metadata with TaskRun details
                         List<MetadataItem> metadataItems = new List<MetadataItem>();
                         MetadataItem metadataTaskRun = new MetadataItem("TaskRun","DESeq2Test");
-                        metadataItem.Add(metadataTaskRun);
+                        metadataItems.Add(metadataTaskRun);
                         MetadataItem metadataImage = new MetadataItem("Image","699120554104.dkr.ecr.us-east-1.amazonaws.com/public/wholegenomerna-diffexpr-develop");
-                        metadataItem.Add(metadataImage);
+                        metadataItems.Add(metadataImage);
 
                         // Create a Batch job
                         CloudJob job = batchClient.JobOperations.CreateJob();
                         job.Id = JobId;
-                        job.PoolInformation = new PoolInformation { PoolId = PoolId };
+                        job.PoolInformation = new PoolInformation { PoolId = PoolId }; // Associate the job to a PoolId
                         job.Metadata = metadataItems;
 
                         // Commit the job to Batch Service
@@ -118,12 +121,12 @@ namespace batch_k8s_jobs
                     batchClient.JobOperations.AddTask(JobId, tasks);
 
                     // Monitor task success/failure, specifying a maximum amount of time to wait for the tasks to complete.
-
                     TimeSpan timeout = TimeSpan.FromMinutes(30);
                     Console.WriteLine("Monitoring all tasks for 'Completed' state, timeout in {0}...", timeout);
 
                     IEnumerable<CloudTask> addedTasks = batchClient.JobOperations.ListTasks(JobId);
 
+                    // Monitor job progress and wait for all tasks to complete
                     batchClient.Utilities.CreateTaskStateMonitor().WaitAll(addedTasks, TaskState.Completed, timeout);
 
                     Console.WriteLine("All tasks reached state Completed.");
