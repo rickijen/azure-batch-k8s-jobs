@@ -64,17 +64,20 @@ namespace batch_k8s_jobs
 
                     try
                     {
-                        List<MetadataItem> metadataItem = new List<MetadataItem>();
+                        // Job metadata with TaskRun details
+                        List<MetadataItem> metadataItems = new List<MetadataItem>();
                         MetadataItem metadataTaskRun = new MetadataItem("TaskRun","DESeq2Test");
                         metadataItem.Add(metadataTaskRun);
                         MetadataItem metadataImage = new MetadataItem("Image","699120554104.dkr.ecr.us-east-1.amazonaws.com/public/wholegenomerna-diffexpr-develop");
                         metadataItem.Add(metadataImage);
 
+                        // Create a Batch job
                         CloudJob job = batchClient.JobOperations.CreateJob();
                         job.Id = JobId;
                         job.PoolInformation = new PoolInformation { PoolId = PoolId };
-                        job.Metadata = metadataItem;
+                        job.Metadata = metadataItems;
 
+                        // Commit the job to Batch Service
                         job.Commit();
                     }
                     catch (BatchException be)
