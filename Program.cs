@@ -98,7 +98,7 @@ namespace batch_k8s_jobs
 
                     List<CloudTask> tasks = new List<CloudTask>();
 
-                    // Create each of the tasks to process one of the input files. 
+                    // Create each of the tasks to run the container and execute kubectl version
                     for (int i = 0; i < TaskCount; i++)
                     {
                         string taskId = String.Format("Task-{0}", i);
@@ -140,7 +140,7 @@ namespace batch_k8s_jobs
                         Console.WriteLine("---------BEGIN---------");
                         Console.WriteLine("Task: {0}", task.Id);
                         Console.WriteLine("Node: {0}", nodeId);
-                        Console.WriteLine("Standard out:");
+                        Console.WriteLine("Standard out =>");
                         Console.WriteLine(task.GetNodeFile(Constants.StandardOutFileName).ReadAsString());
                         Console.WriteLine("----------END----------");
                     }
