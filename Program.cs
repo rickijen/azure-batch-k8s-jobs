@@ -22,7 +22,7 @@ namespace batch_k8s_jobs
 
         // Batch resource settings
         private const string PoolId = "TES-BATCH-POOL-01";
-        private const string JobId = "TES-NO-DRAGEN-JOB-12";
+        private const string JobId = "TES-NO-DRAGEN-JOB-15";
         private const int JobCount = 5;
         private const int PoolDedicatedNodeCount = 1;
         private const int PoolSpotNodeCount = 1;
@@ -64,9 +64,16 @@ namespace batch_k8s_jobs
 
                     try
                     {
+                        List<MetadataItem> metadataItem = new List<MetadataItem>();
+                        MetadataItem metadataTaskRun = new MetadataItem("TaskRun","DESeq2Test");
+                        metadataItem.Add(metadataTaskRun);
+                        MetadataItem metadataImage = new MetadataItem("Image","699120554104.dkr.ecr.us-east-1.amazonaws.com/public/wholegenomerna-diffexpr-develop");
+                        metadataItem.Add(metadataImage);
+
                         CloudJob job = batchClient.JobOperations.CreateJob();
                         job.Id = JobId;
                         job.PoolInformation = new PoolInformation { PoolId = PoolId };
+                        job.Metadata = metadataItem;
 
                         job.Commit();
                     }
