@@ -23,7 +23,7 @@ namespace batch_k8s_jobs
         // Batch resource settings
         private const string PoolId = "TES-BATCH-POOL-01";
         private const string JobId = "TES-NO-DRAGEN-JOB-15";
-        private const int JobCount = 5;
+        private const int TaskCount = 5;
         private const int PoolDedicatedNodeCount = 1;
         private const int PoolSpotNodeCount = 1;
         private const string PoolVMSize = "STANDARD_D2_V3";
@@ -94,12 +94,12 @@ namespace batch_k8s_jobs
                     }
 
                     // Create a collection to hold the tasks that we'll be adding to the job
-                    Console.WriteLine("Adding {0} tasks to job [{1}]...", JobCount, JobId);
+                    Console.WriteLine("Adding {0} tasks to job [{1}]...", TaskCount, JobId);
 
                     List<CloudTask> tasks = new List<CloudTask>();
 
                     // Create each of the tasks to process one of the input files. 
-                    for (int i = 0; i < JobCount; i++)
+                    for (int i = 0; i < TaskCount; i++)
                     {
                         string taskId = String.Format("Task-{0}", i);
                         string taskCommandLine = "version --client=true";
