@@ -25,7 +25,7 @@ namespace batch_k8s_jobs
         private const string PoolIdMeduim = "TES-BATCH-POOL-MEDIUM";
         private const string PoolIdLarge = "TES-BATCH-POOL-LARGE";
         private const string PoolIdFPGA = "TES-BATCH-POOL-FPGA";
-        private const string JobId = "TES-NO-DRAGEN-JOB-15";
+        private const string JobId = "TES-NO-DRAGEN-JOB-16";
         private const int TaskCount = 5;
         private const int PoolDedicatedNodeCount = 1; // Number of Dedicated VM nodes
         private const int PoolSpotNodeCount = 1; // Number of Spot VM nodes
@@ -186,6 +186,11 @@ namespace batch_k8s_jobs
 
         private static void CreateBatchPool(BatchClient batchClient, VirtualMachineConfiguration vmConfiguration)
         {
+            // Pool metadata with Customer details
+            List<MetadataItem> metadataItems = new List<MetadataItem>();
+            MetadataItem metadataPool = new MetadataItem("Customer","Customer-01");
+            metadataItems.Add(metadataPool);
+
             try
             {
                 CloudPool pool = batchClient.PoolOperations.CreatePool(
@@ -194,7 +199,7 @@ namespace batch_k8s_jobs
                     targetLowPriorityComputeNodes: PoolSpotNodeCount,
                     virtualMachineSize: PoolVMSize,
                     virtualMachineConfiguration: vmConfiguration);
-
+                pool.Metadata = metadataItems;
                 pool.Commit();
             }
             catch (BatchException be)
