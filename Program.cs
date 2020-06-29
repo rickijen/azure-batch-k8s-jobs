@@ -10,17 +10,19 @@ namespace batch_k8s_jobs
 {
     public class Program
     {
-        // Batch account credentials
-        private const string BatchAccountName = "batchtes01";
+        // Constants for Batch account
+	public constant string BATCH_ACCOUNT_NAME = "BATCH_ACCOUNT_NAME";
+	public constant string BATCH_ACCOUNT_KEY = "BATCH_ACCOUNT_KEY";
+	public constant string BATCH_ACCOUNT_URL = "BATCH_ACCOUNT_URL";
 
-        private const string BatchAccountKey = "QY3GY9dg60q04soQZnE7ivXL8XlDn66e+HUU3RncPeSHxiT2ssrN/P8de1EPMYWO57nk7G933dHr8rKP06NmIg==";
-        private const string BatchAccountUrl = "https://batchtes01.westus2.batch.azure.com";
+  	// Constants for Storage account
+	public constant string STORAGE_ACCOUNT_NAME = "STORAGE_ACCOUNT_NAME";
+	public constant string STORAGE_ACCOUNT_KEY = "STORAGE_ACCOUNT_KEY";
 
-        // Storage account credentials, Storage for INPUT/OUTPUT files.
-        private const string StorageAccountName = "samydata";
-        private const string StorageAccountKey = "DEniUJ/IWnPlUByum4tPHyAslsKW1IZfFcSw/p5oVJPYgVvWVbERYRWyyWPg+SyfrReV0+gYamIu5EgXIcIGLw==";
+	// Constant for Image ID
+	public constant String VM_IMAGE_ID = "VM_IMAGE_ID";
 
-        // Batch resource settings
+        // Constants for Batch resource settings
         private const string PoolIdSmall = "TES-BATCH-POOL-SMALL";
         private const string PoolIdMeduim = "TES-BATCH-POOL-MEDIUM";
         private const string PoolIdLarge = "TES-BATCH-POOL-LARGE";
@@ -37,13 +39,27 @@ namespace batch_k8s_jobs
         
         static void Main()
         {
+            // Batch account credentials
+            string BatchAccountName = Environment.GetEnvironmentVariable(BATCH_ACCOUNT_NAME);
+            string BatchAccountKey = Environment.GetEnvironmentVariable(BATCH_ACCOUNT_KEY);
+            string BatchAccountUrl = Environment.GetEnvironmentVariable(BATCH_ACCOUNT_URL);
+
+            // Storage account credentials, Storage for INPUT/OUTPUT files.
+            string StorageAccountName = Environment.GetEnvironmentVariable(STORAGE_ACCOUNT_NAME);
+            string StorageAccountKey = Environment.GetEnvironmentVariable(STORAGE_ACCOUNT_KEY);
+
+	    // Shared Image Gallery Image ID
+	    string ImageId = Environment.GetEnvironmentVariable(VM_IMAGE_ID);
 
             if (String.IsNullOrEmpty(BatchAccountName) || 
                 String.IsNullOrEmpty(BatchAccountKey) ||
                 String.IsNullOrEmpty(BatchAccountUrl))
             {
-                throw new InvalidOperationException("One or more account credential strings have not been populated. Please ensure that your Batch account credentials have been specified.");
-            }
+                throw new ArgumentNullException("One or more account credential strings have not been populated. Please ensure that your Batch account credentials have been specified.");
+            };
+
+	    if ( String.IsNullOrEmpty(ImageId) )
+		throw new ArgumentNullException("Image ID is required to create a Batch pool!");
 
             try
             {
@@ -53,7 +69,8 @@ namespace batch_k8s_jobs
                 timer.Start();
 
                 // Get a Batch client using account creds
-                BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(BatchAccountUrl, BatchAccountName, BatchAccountKey);
+                BatchSharedKeyCredentials cred = 
+ 		    new BatchSharedKeyCredentials(BatchAccountUrl, BatchAccountName, BatchAccountKey);
 
                 using (BatchClient batchClient = BatchClient.Open(cred))
                 {
@@ -239,7 +256,7 @@ namespace batch_k8s_jobs
 
             VirtualMachineConfiguration VMconfig = new VirtualMachineConfiguration(
                 imageReference: imageReference,
-                nodeAgentSkuId: "batch.node.ubuntu 16.04");
+                nodeAgentSkuId: "batch.node.ubuntu 18.04");
             VMconfig.ContainerConfiguration = containerConfig;
 
             return VMconfig;
@@ -247,11 +264,15 @@ namespace batch_k8s_jobs
 
         private static ImageReference CreateImageReference()
         {
-            return new ImageReference(
+            /**
+		return new ImageReference(
                 publisher: "microsoft-azure-batch",
                 offer: "ubuntu-server-container",  // Ubuntu Server Container LTS
-                sku: "16-04-lts",
+                sku: "18-04-lts",
                 version: "latest");
+	    */
+	    string ImageId = Environment.GetEnvironmentVariable(VM_IMAGE_ID);
+	    return new ImageReference(virtualMachineImageId: ImageId);
         }
     }
 }
