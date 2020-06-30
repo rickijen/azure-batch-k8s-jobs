@@ -1,49 +1,98 @@
 ﻿using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Auth;
+using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using Microsoft.Azure.Batch.Common;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace batch_k8s_jobs
 {
     public class Program
     {
-        // Batch account credentials
-        private const string BatchAccountName = "batchtes01";
+	/***** Environment variables ** BEGIN *****/
 
-        private const string BatchAccountKey = "QY3GY9dg60q04soQZnE7ivXL8XlDn66e+HUU3RncPeSHxiT2ssrN/P8de1EPMYWO57nk7G933dHr8rKP06NmIg==";
-        private const string BatchAccountUrl = "https://batchtes01.westus2.batch.azure.com";
+	// Constants for AD resources
+	public const string AD_TENANT_ID = "AD_TENANT_ID";
+	public const string SP_CLIENT_ID = "SP_CLIENT_ID";
+	public const string SP_CLIENT_SECRET = "SP_CLIENT_SECRET";
 
-        // Storage account credentials, Storage for INPUT/OUTPUT files.
-        private const string StorageAccountName = "samydata";
-        private const string StorageAccountKey = "DEniUJ/IWnPlUByum4tPHyAslsKW1IZfFcSw/p5oVJPYgVvWVbERYRWyyWPg+SyfrReV0+gYamIu5EgXIcIGLw==";
+        // Constants for Batch account
+	public const string BATCH_ACCOUNT_NAME = "BATCH_ACCOUNT_NAME";
+	// public const string BATCH_ACCOUNT_KEY = "BATCH_ACCOUNT_KEY";
+	public const string BATCH_ACCOUNT_URL = "BATCH_ACCOUNT_URL";
 
-        // Batch resource settings
+  	// Constants for Storage account
+	public const string STORAGE_ACCOUNT_NAME = "STORAGE_ACCOUNT_NAME";
+	public const string STORAGE_ACCOUNT_KEY = "STORAGE_ACCOUNT_KEY";
+
+	// Constants for container registry
+	public const string REGISTRY_NAME = "REGISTRY_NAME";
+	public const string REGISTRY_USER = "REGISTRY_USER";
+	public const string REGISTRY_USER_PWD = "REGISTRY_USER_PWD";
+
+	// Constant for Image ID
+	public const String VM_IMAGE_ID = "VM_IMAGE_ID";
+
+	/***** Environment variables ** END *****/
+
+        // Constants for Batch resource settings
         private const string PoolIdSmall = "TES-BATCH-POOL-SMALL";
         private const string PoolIdMeduim = "TES-BATCH-POOL-MEDIUM";
         private const string PoolIdLarge = "TES-BATCH-POOL-LARGE";
         private const string PoolIdFPGA = "TES-BATCH-POOL-FPGA";
         private const string JobId = "TES-NO-DRAGEN-JOB-16";
-        private const int TaskCount = 5;
+
         private const int PoolDedicatedNodeCount = 1; // Number of Dedicated VM nodes
         private const int PoolSpotNodeCount = 1; // Number of Spot VM nodes
         private const string PoolVMSizeSmall = "STANDARD_D2_V3";
         
+	private const string AuthorityBaseUri = "https://login.microsoftonline.com/";
+	private const string BatchResourceUri = "https://batch.core.windows.net/";
+
         // Pool SKU
         private const string PoolId = PoolIdSmall;
         private const string PoolVMSize = PoolVMSizeSmall;
+
+	private const int NodeInitTime = 6; // In minutes
         
         static void Main()
         {
+	    // AD Tenant ID
+	    string TenantId = Environment.GetEnvironmentVariable(AD_TENANT_ID);
+	    string ClientId = Environment.GetEnvironmentVariable(SP_CLIENT_ID);
+	    string ClientSecret = Environment.GetEnvironmentVariable(SP_CLIENT_SECRET);
 
-            if (String.IsNullOrEmpty(BatchAccountName) || 
-                String.IsNullOrEmpty(BatchAccountKey) ||
-                String.IsNullOrEmpty(BatchAccountUrl))
-            {
-                throw new InvalidOperationException("One or more account credential strings have not been populated. Please ensure that your Batch account credentials have been specified.");
-            }
+            // Batch account credentials
+            string BatchAccountName = Environment.GetEnvironmentVariable(BATCH_ACCOUNT_NAME);
+            // string BatchAccountKey = Environment.GetEnvironmentVariable(BATCH_ACCOUNT_KEY);
+            string BatchAccountUrl = Environment.GetEnvironmentVariable(BATCH_ACCOUNT_URL);
+
+            // Storage account credentials, Storage for INPUT/OUTPUT files.
+            string StorageAccountName = Environment.GetEnvironmentVariable(STORAGE_ACCOUNT_NAME);
+            string StorageAccountKey = Environment.GetEnvironmentVariable(STORAGE_ACCOUNT_KEY);
+
+	    // Shared Image Gallery Image ID
+	    string ImageId = Environment.GetEnvironmentVariable(VM_IMAGE_ID);
+
+	    if ( String.IsNullOrEmpty(TenantId) ) 
+		throw new ArgumentNullException("AD Tenant ID is required!");
+	    string AuthorityUri = AuthorityBaseUri + TenantId;
+
+            if ( String.IsNullOrEmpty(ClientId) || 
+                 String.IsNullOrEmpty(ClientSecret) )
+		throw new ArgumentNullException("Service Principal Client ID and Secret are required!");
+
+            if ( String.IsNullOrEmpty(BatchAccountName) || 
+//                 String.IsNullOrEmpty(BatchAccountKey) ||
+                 String.IsNullOrEmpty(BatchAccountUrl) )
+                throw new ArgumentNullException("Batch account name and url are required!");
+
+	    if ( String.IsNullOrEmpty(ImageId) )
+		throw new ArgumentNullException("Image ID (Managed Image resource) is required to create a Batch pool!");
 
             try
             {
@@ -53,7 +102,12 @@ namespace batch_k8s_jobs
                 timer.Start();
 
                 // Get a Batch client using account creds
-                BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(BatchAccountUrl, BatchAccountName, BatchAccountKey);
+                // BatchSharedKeyCredentials cred = 
+ 		    // new BatchSharedKeyCredentials(BatchAccountUrl, BatchAccountName, BatchAccountKey);
+		Func<Task<string>> tokenProvider =
+		    () => GetAuthenticationTokenAsync(AuthorityUri,ClientId,ClientSecret);
+		BatchTokenCredentials cred =
+		    new BatchTokenCredentials(BatchAccountUrl,tokenProvider);
 
                 using (BatchClient batchClient = BatchClient.Open(cred))
                 {
@@ -62,7 +116,8 @@ namespace batch_k8s_jobs
                     // Create a Ubuntu Server image with Docker, VM configuration, Batch pool
                     ImageReference imageReference = CreateImageReference();
 
-                    VirtualMachineConfiguration vmConfiguration = CreateVirtualMachineConfiguration(imageReference);
+                    VirtualMachineConfiguration vmConfiguration = 
+		        CreateVirtualMachineConfiguration(imageReference);
 
                     CreateBatchPool(batchClient, vmConfiguration);
 
@@ -100,26 +155,38 @@ namespace batch_k8s_jobs
                         }
                     }
 
-                    // Create a collection to hold the tasks that we'll be adding to the job
-                    Console.WriteLine("Adding {0} tasks to job [{1}]...", TaskCount, JobId);
+                    Console.WriteLine("Pausing {0} minutes for k8s to initialize on batch node.", NodeInitTime);
+		    Thread.Sleep(NodeInitTime * 60 * 1000); // In ms
 
                     List<CloudTask> tasks = new List<CloudTask>();
 
-                    // Create each of the tasks to run the container and execute kubectl version
-                    for (int i = 0; i < TaskCount; i++)
-                    {
-                        string taskId = String.Format("Task-{0}", i);
-                        string taskCommandLine = "version --client=true";
+                    // Create a task to run the bitnami container and execute kubectl version
 
-                        TaskContainerSettings cmdContainerSettings = new TaskContainerSettings (
-                            imageName: "batchtes01.azurecr.io/tes/kubectl",
-                            containerRunOptions: "--rm --workdir /"
-                            );
+                    TaskContainerSettings cmdContainerSettings = new TaskContainerSettings (
+                           imageName: "batchtes01.azurecr.io/tes/kubectl",
+                           containerRunOptions: "--rm -v /home/labuser/.kube/config:/.kube/config"
+                         );
 
-                        CloudTask containerTask = new CloudTask(taskId, taskCommandLine);
-                        containerTask.ContainerSettings = cmdContainerSettings;
-                        tasks.Add(containerTask);
-                    }
+                    string taskId = "kubectl-cluster-info";
+                    Console.WriteLine("Adding task [{0}] to job [{1}]...", taskId, JobId);
+                    string taskCommandLine = "cluster-info";
+                    CloudTask containerTask = new CloudTask(taskId, taskCommandLine);
+                    containerTask.ContainerSettings = cmdContainerSettings;
+                    tasks.Add(containerTask);
+
+                    taskId = "kubectl-version";
+                    Console.WriteLine("Adding task [{0}] to job [{1}]...", taskId, JobId);
+                    taskCommandLine = "version";
+                    containerTask = new CloudTask(taskId, taskCommandLine);
+                    containerTask.ContainerSettings = cmdContainerSettings;
+                    tasks.Add(containerTask);
+
+                    taskId = "get-pods-all-namespaces";
+                    Console.WriteLine("Adding task [{0}] to job [{1}]...", taskId, JobId);
+		    taskCommandLine = "get pods --all-namespaces";
+		    containerTask = new CloudTask(taskId, taskCommandLine);
+                    containerTask.ContainerSettings = cmdContainerSettings;
+                    tasks.Add(containerTask);
 
                     // Add all tasks to the job.
                     batchClient.JobOperations.AddTask(JobId, tasks);
@@ -178,7 +245,7 @@ namespace batch_k8s_jobs
             finally
             {
                 Console.WriteLine();
-                Console.WriteLine("Sample complete, hit ENTER to exit...");
+                Console.WriteLine("Press ENTER to exit...");
                 Console.ReadLine();
             }
             
@@ -196,7 +263,7 @@ namespace batch_k8s_jobs
                 CloudPool pool = batchClient.PoolOperations.CreatePool(
                     poolId: PoolId,
                     targetDedicatedComputeNodes: PoolDedicatedNodeCount,
-                    targetLowPriorityComputeNodes: PoolSpotNodeCount,
+                    // targetLowPriorityComputeNodes: PoolSpotNodeCount,
                     virtualMachineSize: PoolVMSize,
                     virtualMachineConfiguration: vmConfiguration);
                 pool.Metadata = metadataItems;
@@ -218,18 +285,27 @@ namespace batch_k8s_jobs
                 }
                 else
                 {
-                    throw; // Any other exception is unexpected
+                    throw be; // Any other exception is unexpected
                 }
             }
         }
 
         private static VirtualMachineConfiguration CreateVirtualMachineConfiguration(ImageReference imageReference)
         {
+	    string contRegistry = Environment.GetEnvironmentVariable(REGISTRY_NAME);
+	    string contRegistryUser = Environment.GetEnvironmentVariable(REGISTRY_USER);
+	    string contRegistryUserPwd = Environment.GetEnvironmentVariable(REGISTRY_USER_PWD);
+
+            if ( String.IsNullOrEmpty(contRegistry) || 
+                 String.IsNullOrEmpty(contRegistryUser) ||
+                 String.IsNullOrEmpty(contRegistryUserPwd) )
+                throw new ArgumentNullException("Container registry name, user name and/or password is missing. Exiting!");
+
             // Specify a container registry
             ContainerRegistry containerRegistry = new ContainerRegistry(
-                registryServer: "batchtes01.azurecr.io",
-                userName: "batchtes01",
-                password: "xMn6QubjIB996o8bLI=kgr2ji=XMohhk");
+                registryServer: contRegistry,
+                userName: contRegistryUser,
+                password: contRegistryUserPwd);
 
             // Create container configuration, prefetching Docker images from the container registry
             ContainerConfiguration containerConfig = new ContainerConfiguration();
@@ -239,7 +315,7 @@ namespace batch_k8s_jobs
 
             VirtualMachineConfiguration VMconfig = new VirtualMachineConfiguration(
                 imageReference: imageReference,
-                nodeAgentSkuId: "batch.node.ubuntu 16.04");
+                nodeAgentSkuId: "batch.node.ubuntu 18.04");
             VMconfig.ContainerConfiguration = containerConfig;
 
             return VMconfig;
@@ -247,11 +323,26 @@ namespace batch_k8s_jobs
 
         private static ImageReference CreateImageReference()
         {
-            return new ImageReference(
+            /**
+		return new ImageReference(
                 publisher: "microsoft-azure-batch",
                 offer: "ubuntu-server-container",  // Ubuntu Server Container LTS
-                sku: "16-04-lts",
+                sku: "18-04-lts",
                 version: "latest");
+	    */
+	    string ImageId = Environment.GetEnvironmentVariable(VM_IMAGE_ID);
+	    return new ImageReference(virtualMachineImageId: ImageId);
         }
+
+	private static async Task<string> GetAuthenticationTokenAsync(
+		string authUri,
+		string clientId,
+		string clientKey)
+	{
+	    AuthenticationContext authContext = new AuthenticationContext(authUri);
+	    AuthenticationResult authResult = await authContext.AcquireTokenAsync(BatchResourceUri, new ClientCredential(clientId, clientKey));
+
+	    return authResult.AccessToken;
+	}
     }
 }
