@@ -29,8 +29,8 @@ namespace batch_k8s_jobs
 	public const string STORAGE_ACCOUNT_NAME = "STORAGE_ACCOUNT_NAME";
 	public const string STORAGE_ACCOUNT_KEY = "STORAGE_ACCOUNT_KEY";
 
-	// Constants for container registry
-	public const string REGISTRY_NAME = "REGISTRY_NAME";
+	// Constants for azure container registry
+	public const string REGISTRY_NAME = "REGISTRY_NAME"; // xxx.azurecr.io
 	public const string REGISTRY_USER = "REGISTRY_USER";
 	public const string REGISTRY_USER_PWD = "REGISTRY_USER_PWD";
 
@@ -56,6 +56,9 @@ namespace batch_k8s_jobs
         // Pool SKU
         private const string PoolId = PoolIdSmall;
         private const string PoolVMSize = PoolVMSizeSmall;
+
+	// Task Container Images
+	private const string TaskImageK8sCli = "batchtes01.azurecr.io/tes/kubectl";
 
 	private const int NodeInitTime = 6; // In minutes
         
@@ -163,7 +166,7 @@ namespace batch_k8s_jobs
                     // Create a task to run the bitnami container and execute kubectl version
 
                     TaskContainerSettings cmdContainerSettings = new TaskContainerSettings (
-                           imageName: "batchtes01.azurecr.io/tes/kubectl",
+                           imageName: TaskImageK8sCli,
                            containerRunOptions: "--rm -v /home/labuser/.kube/config:/.kube/config"
                          );
 
@@ -309,8 +312,7 @@ namespace batch_k8s_jobs
 
             // Create container configuration, prefetching Docker images from the container registry
             ContainerConfiguration containerConfig = new ContainerConfiguration();
-            containerConfig.ContainerImageNames = new List<string> {
-                    "batchtes01.azurecr.io/tes/kubectl" };
+            containerConfig.ContainerImageNames = new List<string> { TaskImageK8sCli };
             containerConfig.ContainerRegistries = new List<ContainerRegistry> { containerRegistry };
 
             VirtualMachineConfiguration VMconfig = new VirtualMachineConfiguration(
