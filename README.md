@@ -4,13 +4,15 @@ Languages:
 - CSharp PL, Linux Bash Script
 Products:
 - Azure Batch, Kubernetes, TESK
-Problem Definition: "Customers wanting to run Genomics sequencing workloads on a public cloud (Azure, AWS, GCP) often want to automate the process of both deploying a stand-alone Kubernetes cluster and deploying a GA4GH compliant TES engine on the cluster.  The steps involved in running a TES engine on a Kubernetes cluster running on a high capacity VM is often laborious, challenging and error prone.  This project provides a simple automated solution and address several problems tied to this use case.  Most importantly, this GitHub project details the steps for provisioning a Kubernetes cluster on Azure Batch Service, a job scheduling and compute management platform that enables running large scale parallel and HPC applications efficiently in the cloud."
+Problem Definition: "Customers usually rely on public cloud infrastructure for running massively parallel HPC workloads such as Genomics sequencers. More and more customers are now turning to **Kubernetes** to provide a flexible, reliable, highly available and scalable platform for running HPC workloads.  To efficiently execute HPC workloads on the cloud, there is a need to automate the steps for a) Provisioning/Decommissioning IaaS VMs of varying compute capacities on public clouds b) Deploying stand-alone Kubernetes clusters on IaaS VMs & c) Deploying GA4GH compliant TES engines on Kubernetes clusters."
 UrlFragment: azure-batch-k8s-jobs
 ---
 
 # A solution framework for running GA4GH TES Engine on Kubernetes on Azure Batch Service
 
-This project provides a skeleton framework/API for deploying TES application workloads on Kubernetes running on Azure Batch Service.  The framework provides a foundational API layer which customers can easily extend and build upon to meet their unique needs and requirements. 
+This GitHub project 
+- Details the steps for provisioning a standalone Kubernetes cluster on Azure Batch Service. Azure Batch is a job scheduling and compute management platform that enables running large scale parallel and HPC applications efficiently in the cloud.
+- Provides a simple framework for deploying and running HPC workloads such as GA4GH TES engines on Azure Batch Service.  The framework provides an API layer which customers can easily extend and build upon to meet their unique needs and requirements. 
 
 ## Prerequisites
 
@@ -27,6 +29,7 @@ This project provides a skeleton framework/API for deploying TES application wor
 - [Azure Batch Service .NET Core SDK](https://docs.microsoft.com/en-us/dotnet/api/overview/azure/batch/client?view=azure-dotnet)
 - [Azure Storage documentation](https://docs.microsoft.com/en-us/azure/storage/)
 - [Azure Storage .NET Core SDK v12](https://docs.microsoft.com/en-us/dotnet/api/overview/azure/storage.blobs-readme?view=azure-dotnet)
+- [TESK](https://github.com/EMBL-EBI-TSI/TESK)
 
 **Important Notes:**
 - Within all command snippets, a command preceded by a hash ('#') symbol denotes a comment.
@@ -40,7 +43,7 @@ Follow the steps below.
 
    Use one of the Azure marketplace Linux images and provision a VM. Refer to the docs [here](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage) to view the available Linux images.  Then follow the steps [here](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/tutorial-manage-vm) to provision a VM on Azure.
 
-   >>**NOTE:** The scripts included in this project have been tested to work with Ubuntu/Debian Linux.  You may need to tweak the shell scripts / commands if you decide to use a different Linux flavor.
+   >**NOTE:** The scripts included in this project have been tested to work with Ubuntu/Debian Linux.  You may need to tweak the shell scripts / commands if you decide to use a different Linux flavor.
 
 2. Install Docker container engine on the Linux VM
 
@@ -70,7 +73,7 @@ Follow the steps below.
 
 4. Create a shared image gallery, image definition and image version
 
-   >>**NOTE:** The Azure resources created in this step can also be provisioned via the Azure Portal.
+   >**NOTE:** The Azure resources created in this step can also be provisioned via the Azure Portal.
 
    Refer to the command snippet below.
    ```
@@ -109,31 +112,27 @@ Follow the steps below.
    #
    ```
 
-   ```
-   # (Optional) Build the application.  Make sure there are no compilation errors or warnings.
-   $ dotnet build
-   #
-   # Run the container build
-   # Substitute correct values for the following:
-   #   acr-name : Name of your ACR instance
-   $ docker build -t <acr-name>.azurecr.io/recycle-vmss:latest
-   #
-   # List the container images on your workstation/VM. The image built in the preceding step should be listed.
-   $ docker images
-   #
-   # Before you can login to ACR, you should be logged into Azure via Azure CLI.
-   # Login to the ACR instance. Substitute the correct value for 'acr-name' in the command below.
-   $ az acr login -n <acr-name>
-   #
-   # Push the container image into ACR.  Substitute correct value for 'acr-name'.
-   $ docker push <acr-name>.azurecr.io/recycle-vmss:latest
-   #
-   # Verify the image was pushed into your ACR instance via Azure Portal or by running the CLI command below.
-   $ az acr repository list -n <acr-name> -o table
-   #
-   ```
-
 ## B. Create Azure Batch Account and Service Principal
+
+1. Create an Azure Batch Account
+
+   Refer to the [samples](https://docs.microsoft.com/en-us/azure/batch/cli-samples) or Quickstarts in the Azure Batch documentation to create an Azure Batch account.  You only need to create a Batch **account** at this point.  There is no need to create a batch pool.
+
+2. Create an Azure AD Service Principal
+
+   The service principal will be used by the framework to create a batch pool, jobs, tasks etc.
+
+   Refer to this documentation [resource](https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal#register-an-application-with-azure-ad-and-create-a-service-principal) to register an application with Azure AD and create a service principal.
+
+3. Assign permissions to the Azure AD Service Principal
+
+   After creating the Azure Service Principal, it has to be assigned 'Contributor' permissions for 
+   - Azure Batch Account and 
+   - Shared Image Gallery image version
+
+   Refer to the documentation link in previous step to assign permissions to the service principal. 
+
+## C. Create Azure Storage Account and Blob containers
 
 
    Environment Variable Name | Value | Description
