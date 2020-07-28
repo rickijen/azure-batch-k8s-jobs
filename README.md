@@ -4,15 +4,22 @@ Languages:
 - CSharp PL, Linux Bash Script
 Products:
 - Azure Batch, Kubernetes, TESK
-Problem Definition: "Customers usually rely on public cloud infrastructure for running massively parallel HPC workloads such as Genomics sequencers. More and more customers are now turning to **Kubernetes** to provide a flexible, reliable, highly available and scalable platform for running HPC workloads.  To efficiently execute HPC workloads on the cloud, there is a need to automate the steps for a) Provisioning/Decommissioning IaaS VMs of varying compute capacities on public clouds b) Deploying stand-alone Kubernetes clusters on IaaS VMs & c) Deploying GA4GH compliant TES engines on Kubernetes clusters."
+Problem Definition: "Public cloud infrastructures and Kubernetes have now become the defacto platforms of choice for customers wanting to run massively parallel HPC workloads such as Genomics sequencers.  Although, public cloud platform vendors provide comprehensive SDK's for provisioning various IaaS resources and PaaS services, tooling that allows customers to efficiently and quickly deploy all required HPC services is mostly lacking."
 UrlFragment: azure-batch-k8s-jobs
 ---
 
-# A solution framework for running GA4GH TES Engine on Kubernetes on Azure Batch Service
+# An application framework for running HPC workloads on Kubernetes on Azure Batch Service
+
+More and more customers are now turning to **Kubernetes** container platform as it provides a flexible, reliable, highly available and scalable platform for running HPC workloads.
+
+To efficiently run HPC workloads on public clouds, there is a need to automate the steps for 
+- Provisioning/Decommissioning IaaS VMs of varying compute capacities
+- Deploying stand-alone Kubernetes cluster on high capacity compute/VMs &
+- Deploying HPC workloads such as [GA4GH](https://www.ga4gh.org/) compliant TES engines on Kubernetes cluster
 
 This GitHub project 
 - Details the steps for provisioning a standalone Kubernetes cluster on Azure Batch Service. Azure Batch is a job scheduling and compute management platform that enables running large scale parallel and HPC applications efficiently in the cloud.
-- Provides a simple framework for deploying and running HPC workloads such as GA4GH TES engines on Azure Batch Service.  The framework provides an API layer which customers can easily extend and build upon to meet their unique needs and requirements. 
+- Provides a simple application framework for deploying HPC workloads such as GA4GH TES engines on Azure Batch Service.  The framework provides an API layer which customers can easily extend and build upon to meet their unique needs and requirements. 
 
 ## Prerequisites
 
@@ -134,6 +141,33 @@ Follow the steps below.
 
 ## C. Create Azure Storage Account and Blob containers
 
+The Azure Storage Account is used to store applications, Kubernetes resources and TESK applications/tasks.  These artifacts are stored in individual blobs in respective storage containers.
+
+1. Create an Azure Storage Account
+
+   Refer to Azure Storage [Documentation](https://docs.microsoft.com/en-us/azure/storage/common/storage-account-create?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json&tabs=azure-portal) to create an general purpose v2 storage account.
+
+2. Create Storage Blob Containers
+
+   Refer to this Azure Storage [Quickstart](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-portal) and create the following Blob containers.  Refer to the table below.
+
+   Name | Description
+   ---- | -----------
+   apps | Stores applications which need to be deployed on Azure Batch Pool VM's.
+   k8sresources | Stores Kubernetes application deployment manifests
+   tesk-tasks | Stores TESK applications (eg., Genomics tasks) to be run on Kubernetes
+
+3. Upload project artifacts to Blob Containers
+
+   Use [Azure Portal](https://portal.azure.com) to upload the project files to respective storage containers as listed in the table below.
+
+   Storage Container | Directory | Description
+   ----------------- | ----- | -----------
+   apps | `./task-scripts/apps` | Copy all files in the folder/directory to the storage container.
+   k8sresources | `./k8sresources/tesk` | Copy all files in the folder/directory to the storage container.
+   tesk-tasks | `./tesk-tasks` | Copy all files within sub-folders to the storage container.  Create sub-folders (virtual directories) within the storage container as necessary.
+
+## D. Run and test the sample HPC application
 
    Environment Variable Name | Value | Description
    ------------------------- | ----- | -----------
