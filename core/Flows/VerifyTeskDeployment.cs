@@ -41,7 +41,7 @@ namespace core.Flows
 	 CloudTask task = new CloudTask(taskName,command);
 	 tasks.Add(task);
 
-	 taskName = "Describe-Tesk-Pod";
+	 taskName = "Describe-Tesk-Api-Pod";
 	 command = "/bin/sh -c \"kubectl --kubeconfig=$AZ_BATCH_NODE_STARTUP_DIR/config describe pod\"";
 	 task = new CloudTask(taskName,command);
 	 tasks.Add(task);
@@ -73,7 +73,7 @@ namespace core.Flows
 	 task = new CloudTask(taskName,command);
 	 tasks.Add(task);
 
-	 taskName = "Get-Task-Status";
+	 taskName = "Get-Tesk-Task-Status";
 	 command = 
 	   $"/bin/sh -c \"curl -X GET -s --header 'Accept: application/json' {endpoint}\"";
 	 task = new CloudTask(taskName,command);

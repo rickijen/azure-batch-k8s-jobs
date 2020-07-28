@@ -34,7 +34,7 @@ namespace core.Flows
 	 task.ResourceFiles = engine.GetResourceFiles(containerName,CMD_DIR);
 	 tasks.Add(task);
 
-	 taskName = "Get-Service-IP";
+	 taskName = "Get-Service-NodePort";
 	 command = 
 	   $"/bin/sh -c \"kubectl --kubeconfig=$AZ_BATCH_NODE_STARTUP_DIR/config get svc/tesk-api\"";
 	 task = new CloudTask(taskName,command);

@@ -21,17 +21,17 @@ namespace core.Flows
 	 CloudTask task = new CloudTask(taskName,command);
 	 tasks.Add(task); */
 
-	 string taskName = "Get-cluster-info";
+	 string taskName = "Get-k8s-cluster-info";
 	 string command = "/bin/sh -c \"kubectl --kubeconfig=$AZ_BATCH_NODE_STARTUP_DIR/config cluster-info\"";
 	 CloudTask task = new CloudTask(taskName,command);
 	 tasks.Add(task);
 
-	 taskName = "Get-version-info";
+	 taskName = "Get-k8s-version-info";
 	 command = "/bin/sh -c \"kubectl --kubeconfig=$AZ_BATCH_NODE_STARTUP_DIR/config version\"";
 	 task = new CloudTask(taskName,command);
 	 tasks.Add(task);
 
-	 taskName = "Get-all-pods";
+	 taskName = "Get-pods-all-ns";
 	 command = "/bin/sh -c \"kubectl --kubeconfig=$AZ_BATCH_NODE_STARTUP_DIR/config get pods --all-namespaces\"";
 	 task = new CloudTask(taskName,command);
 	 tasks.Add(task);
