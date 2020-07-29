@@ -1,10 +1,10 @@
 ---
 Type: Sample
 Languages:
-- CSharp PL, Linux Bash Script
+- C# PL, Linux Bash Script
 Products:
 - Azure Batch, Kubernetes, TESK
-Problem Definition: "Public cloud infrastructures and Kubernetes have now become the defacto platforms of choice for customers wanting to run massively parallel HPC workloads such as Genomics sequencers.  Although, public cloud platform vendors provide comprehensive SDK's for provisioning various IaaS resources and PaaS services, tooling that allows customers to efficiently and quickly deploy all required HPC services is mostly lacking."
+Problem Definition: "Public cloud infrastructures and Kubernetes have now become the defacto platforms for customers wanting to run & scale massively parallel HPC workloads such as Genomics sequencers.  Although, public cloud platform vendors provide comprehensive SDK's for provisioning IaaS resources and PaaS services, tooling that allows customers to automate and efficiently deploy all required services is mostly lacking."
 UrlFragment: azure-batch-k8s-jobs
 ---
 
@@ -18,14 +18,18 @@ To efficiently run HPC workloads on public clouds, there is a need to automate t
 - Deploying HPC workloads such as [GA4GH](https://www.ga4gh.org/) compliant TES engines on Kubernetes cluster
 
 This GitHub project 
-- Details the steps for provisioning a standalone Kubernetes cluster on Azure Batch Service. Azure Batch is a job scheduling and compute management platform that enables running large scale parallel and HPC applications efficiently in the cloud.
-- Provides a simple application framework for deploying HPC workloads such as GA4GH TES engines on Azure Batch Service.  The framework provides an API layer which customers can easily extend and build upon to meet their unique needs and requirements. 
+- Details the steps for provisioning a standalone Kubernetes cluster on Azure Batch Service (a.k.a **Engine**). Azure Batch is a job scheduling and compute management platform that enables running large scale parallel and HPC applications efficiently in the cloud.
+- Provides a simple application framework for deploying HPC workloads such as GA4GH TES servers on the *Engine*.  The framework provides an API layer which customers can easily extend and build upon to meet their unique needs and requirements. 
 
 ## Prerequisites
 
 - Azure CLI (2.7+) installed on your workstation/VM
 - Azure Container Registry (ACR) or access to Docker Hub
 - Visual Studio 2019, or [.NET Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1) for Linux, macOS, or Windows installed on your workstation/VM
+
+## Functional Architecture
+
+![alt tag](./images/azure-batch-k8s-jobs.png)
 
 ## Resources
 
@@ -39,6 +43,7 @@ This GitHub project
 - [TESK](https://github.com/EMBL-EBI-TSI/TESK)
 
 **Important Notes:**
+- An **Engine** in the context of this project refers to an instance of *Kubernetes running on Azure Batch*
 - Within all command snippets, a command preceded by a hash ('#') symbol denotes a comment.
 - For Azure CLI commands, provide values for all command parameters enclosed within angle brackets ('<'...'>').
 
@@ -169,22 +174,69 @@ The Azure Storage Account is used to store applications, Kubernetes resources an
 
 ## D. Run and test the sample HPC application
 
+In this final step, we will run the provided sample application (`Program.cs`) a.k.a *Client Driver*.  This application will use the application framework (API) to provision
+ - Azure Batch Pool VM
+ - A single node Kubernetes cluster on the pool VM
+ - TESK runtime (API Server) on Kubernetes
+ - Run a simple 'Hello World' task on TESK
+
+Follow the steps below to deploy the engine and run a sample application.
+   
+1. Set environment variables 
+
+   Before running the sample application, set environment variables listed in the table below to appropriate values.  You can use the shell script `./set-env.test.sh` to configure the env variables for the current shell session.
+
    Environment Variable Name | Value | Description
    ------------------------- | ----- | -----------
-   AzureWebJobsStorage | Required | Azure Storage Account connection string. Azure Functions runtime uses this storage account to store/manipulate WebJobs logs. 
-   WEBSITE_TIME_ZONE | Required | Set this value based on your time zone. The list of TZ strings can be found [here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
-   FUNCTIONS_WORKER_RUNTIME | dotnet | Runtime for this Azure Function is **dotnet**. Leave this value as is.
-   AZURE_AD_TENANT_ID | Required | Specify the Azure AD Tenant ID.  You can use Azure Portal or CLI to retrieve this value.
-   AZURE_AD_TOKEN_EP | https://login.microsoftonline.com | Azure AD Token end-point.  Leave this value as is.
-   AZURE_SP_CLIENT_ID | Required | This solution uses OAuth Client Credentials Flow to authenticate a *Service Principal* against Azure AD.  An Azure Service Principal ID with appropriate permissions to access the target VMSS resource is required.  Refer to [Azure AD documentation](https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal) to create a Service Principal and assign it relevant permissions. 
-   AZURE_SP_CLIENT_SECRET | Required | The secret associated with the Azure AD Service Principal.
-   AZURE_SP_APP_ID_URI | https://management.azure.com | This is the Azure Resource Manager API end-point.  Leave this value as is.
-   AZURE_SUBSCRIPTION_ID | Required | Specify the Azure Subscription ID where the AKS cluster VMSS resource is deployed.
-   AZURE_RES_GROUP_NAME | Required | Specify the Resource Group in which the VMSS resource is deployed.  This is usually the AKS cluster **node** resource group.
-   AZURE_VMSS_NAME | Required | Specify the name of the VMSS.
-   AZURE_VMSS_API_VER | 2019-12-01 | This is the Azure resource provider API version. You can leave this value as is.
-   AZURE_VMSS_ACTION | Required | Specify the **action** to be performed on the VMSS.  Supported values are - **start** (to start the VMSS), **deallocate** (to stop and deallocate the VM's associated with the VMSS).
-   VmssTriggerSchedule | Required | An NCRONTAB expression which specifies the Function execution schedule. Refer to the [Function documentation](https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer?tabs=csharp#ncrontab-expressions) for details and correct syntax.
+   AZURE_AD_TENANT_ID | Required | Azure AD Tenant ID.  Use Azure Portal or CLI to determine this value.
+   AZURE_AD_SP_CLIENT_ID | Required | An Azure Service Principal ID with appropriate permissions to access the Azure Batch and Shared Image Gallery image resources.  Refer to [Azure AD documentation](https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal) to create a Service Principal and assign it relevant permissions. 
+   AZURE_AD_SP_CLIENT_SECRET | Required | Secret for the Azure AD Service Principal.
+   AZURE_BATCH_ACCOUNT_NAME | Required | Name of the Azure Batch account.
+   AZURE_BATCH_ACCOUNT_URL | Required | Batch account URL in the form - https://[AZURE_BATCH_ACCOUNT_NAME].[AZURE_REGION].batch.azure.com
+   AZURE_BATCH_VM_IMAGE_ID | Required | Resource ID of the shared image gallery image.
+   AZURE_BATCH_VM_SIZE | Required | Azure VM SKU.  Default: STANDARD_D2_V3.
+   AZURE_BATCH_VM_NODE_COUNT | Required | Default: 1.  Leave this value as-is.
+   AZURE_ACR_NAME | Optional | Name of Azure Container Registry (ACR).
+   AZURE_ACR_USER | Optional | Login name for ACR.
+   AZURE_ACR_USER_PWD | Optional | Login name password for ACR.
+   AZURE_STORAGE_ACCOUNT_NAME | Required | Name of the Azure Storage account.
+   AZURE_STORAGE_ACCOUNT_KEY | Required | Key for the Azure Storage account.
+   AZURE_STORAGE_APP_DIRECTORY | Required | Azure storage container (name) where VM applications are stored.
+   AZURE_STORAGE_K8S_DIRECTORY | Required | Azure storage container (name) where Kubernetes application manifests are stored.
+
+2. Run the sample application on the engine
+
+   Refer to the command snippet below to build and run the sample application.
+   ```
+   # Switch to the project root directory 'azure-batch-k8s-jobs'
+   #
+   # Build the sample application. You should have VS Studio Code or .NET Core 3.1 SDK installed on your
+   # machine.  When the build finishes, make sure there are no compilation errors or warnings before 
+   # proceeding.
+   #
+   $ dotnet build
+   #
+   # Run the sample application.  The application will print log messages and wait for the tasks to complete.
+   # The application will take approx. 10 mins to finish when it's run for the first time. Both the batch 
+   # pool VM and Kubernetes cluster will be provisioned.  Subsequent tasks runs should finish fast.
+   #
+   $ dotnet run
+   #
+   ```
+
+3. View and verify task execution results
+
+   Login to [Azure Portal](https://portal.azure.com) to view the task execution results.
+
+   Verify Kubernetes cluster was deployed on Azure Batch. Navigate from the **Pools** blade to the **startup** folder on the batch pool VM (Node). See screenshot below.
+
+   ![alt tag](./images/D-01.PNG)
+
+   View the output of Kubernetes deployment tasks.  Navigate from the **Jobs** blade to view the status of all tasks.  You can also drill down into specific **Tasks** to view the output of each task.  See screenshots below.
+
+   ![alt tag](./images/D-02.PNG)
+
+   ![alt tag](./images/D-03.PNG)
 
 ## Project code of conduct
 

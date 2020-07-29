@@ -17,7 +17,7 @@ public class Program
       // an application.  For example, the sample type 'K8S_DETAILS' below retrieves and 
       // prints info. on the kubernetes cluster deployed on Azure Batch.
  
-      // 1. Implement and register workflow type(s) with the workflow factory
+      // 1. Register workflow type(s) with the workflow factory
       IBatchWorkflowFactory factory = BatchWorkflowFactory.GetInstance();
       factory.RegisterWorkflowType(WorkflowTypes.K8S_DETAILS,"core.Flows.K8sClusterInfo");
       factory.RegisterWorkflowType(WorkflowTypes.TESK_DEPLOY,"core.Flows.DeployTesk");
@@ -25,7 +25,7 @@ public class Program
       // Add a couple more tasks to test TESK deployment
       // factory.RegisterWorkflowType("test-tesk-deployment","core.Flows.VerifyTeskDeployment");
 
-      // 2. Instantiate the Azure batch Kubernetes workflow engine
+      // 2. Instantiate the workflow engine (Kubernetes on Azure Batch)
       IWorkflowEngine engine = 
 	BatchEngineFactory.GetEngine(
 	  BatchEngineFactory.ENGINE_TYPE_K8S, // Batch workflow engine of type "Kubernetes"
@@ -35,13 +35,14 @@ public class Program
       Dictionary<string, string> poolMetaData = new Dictionary<string, string>();
       poolMetaData.Add("Env","Test");
       poolMetaData.Add("OS","Ubuntu Server 18.04 LTS");
-      poolMetaData.Add("ImageType","Custom image with docker & kubeadm");
+      poolMetaData.Add("ImageType","Custom image with docker");
 
       // Add batch job metadata
       Dictionary<string, string> jobMetaData = new Dictionary<string, string>();
-      jobMetaData.Add("Type","Get K8s Information");
+      jobMetaData.Add("Type","Run tasks on K8s on Azure Batch");
 
       // 3. Add workflow type(s) to be executed by the workflow engine
+      // Sample workflow types can be found in './core/Flows' directory
       engine.AddWorkflow(WorkflowTypes.K8S_DETAILS);
       engine.AddWorkflow(WorkflowTypes.TESK_DEPLOY);
       // engine.AddWorkflow("test-tesk-deployment"); // verify Tesk deployment
