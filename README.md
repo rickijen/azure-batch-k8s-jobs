@@ -184,7 +184,7 @@ Follow the steps below to deploy the engine and run a sample application.
    
 1. Set environment variables 
 
-   Before running the sample application, set environment variables listed in the table below to appropriate values.
+   Before running the sample application, set environment variables listed in the table below to appropriate values.  You can use the shell script `./set-env.test.sh` to configure the env variables for the current shell session.
 
    Environment Variable Name | Value | Description
    ------------------------- | ----- | -----------
