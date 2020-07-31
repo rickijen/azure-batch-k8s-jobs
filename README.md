@@ -19,12 +19,12 @@ To efficiently run HPC workloads on public clouds, there is a need to automate t
 
 This GitHub project 
 - Details the steps for provisioning a standalone Kubernetes cluster on Azure Batch Service (a.k.a **Engine**). Azure Batch is a job scheduling and compute management platform that enables running large scale parallel and HPC applications efficiently in the cloud.
-- Provides a simple application framework for deploying HPC workloads such as GA4GH TES servers on the *Engine*.  The framework provides an API layer which customers can easily extend and build upon to meet their unique needs and requirements. 
+- Provides a simple workflow application framework for deploying HPC workloads such as GA4GH TES servers on the *Engine*.  The framework provides an API layer which customers can easily extend and build upon to meet their unique needs and requirements. 
 
 ## Prerequisites
 
 - Azure CLI (2.7+) installed on your workstation/VM
-- Azure Container Registry (ACR) or access to Docker Hub
+- Azure Container Registry (ACR) or access to Docker Hub (Optional)
 - Visual Studio 2019, or [.NET Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1) for Linux, macOS, or Windows installed on your workstation/VM
 
 ## Functional Architecture
@@ -83,7 +83,7 @@ Follow the steps below.
    #
    ```
 
-4. Create a shared image gallery, image definition and image version
+4. Create a *Shared Image Gallery*, Image definition and Image version
 
    >**NOTE:** The Azure resources created in this step can also be provisioned via the Azure Portal.
 
@@ -138,7 +138,7 @@ Follow the steps below.
 
 3. Assign permissions to the Azure AD Service Principal
 
-   After creating the Azure Service Principal, it has to be assigned 'Contributor' permissions for 
+   After creating the Azure Service Principal, it has to be assigned **Contributor** permissions for 
    - Azure Batch Account and 
    - Shared Image Gallery image version
 
@@ -146,7 +146,7 @@ Follow the steps below.
 
 ## C. Create Azure Storage Account and Blob containers
 
-The Azure Storage Account is used to store applications, Kubernetes resources and TESK applications/tasks.  These artifacts are stored in individual blobs in respective storage containers.
+The Azure Storage Account is used to store VM applications, Kubernetes applications (resources) and HPC applications such as TESK applications/tasks.  These artifacts are stored in individual blobs in respective Azure storage containers.
 
 1. Create an Azure Storage Account
 
@@ -159,8 +159,8 @@ The Azure Storage Account is used to store applications, Kubernetes resources an
    Name | Description
    ---- | -----------
    apps | Stores applications which need to be deployed on Azure Batch Pool VM's.
-   k8sresources | Stores Kubernetes application deployment manifests
-   tesk-tasks | Stores TESK applications (eg., Genomics tasks) to be run on Kubernetes
+   k8sresources | Stores Kubernetes applications eg., k8s deployment manifests
+   tesk-tasks | Stores HPC application artifacts eg., Genomics tasks (TESK inputs) to be run on Kubernetes
 
 3. Upload project artifacts to Blob Containers
 
@@ -168,16 +168,16 @@ The Azure Storage Account is used to store applications, Kubernetes resources an
 
    Storage Container | Directory | Description
    ----------------- | ----- | -----------
-   apps | `./task-scripts/apps` | Copy all files in the folder/directory to the storage container.
-   k8sresources | `./k8sresources/tesk` | Copy all files in the folder/directory to the storage container.
+   apps | `./task-scripts/apps` | Copy all files in this folder/directory to the storage container.
+   k8sresources | `./k8sresources/tesk` | Copy all files in this folder/directory to the storage container.
    tesk-tasks | `./tesk-tasks` | Copy all files within sub-folders to the storage container.  Create sub-folders (virtual directories) within the storage container as necessary.
 
 ## D. Run and test the sample HPC application
 
-In this final step, we will run the provided sample application (`Program.cs`) a.k.a *Client Driver*.  This application will use the application framework (API) to provision
- - Azure Batch Pool VM
- - A single node Kubernetes cluster on the pool VM
- - TESK runtime (API Server) on Kubernetes
+In this final step, we will run the provided sample application (`Program.cs`) a.k.a *Client Driver*.  This application uses the workflow application framework (API) to
+ - Provision an Azure Batch Pool VM
+ - Deploy an single node Kubernetes cluster on the pool VM
+ - Deploy TESK runtime (API Server) on Kubernetes
  - Run a simple 'Hello World' task on TESK
 
 Follow the steps below to deploy the engine and run a sample application.
@@ -204,7 +204,7 @@ Follow the steps below to deploy the engine and run a sample application.
    AZURE_STORAGE_APP_DIRECTORY | Required | Azure storage container (name) where VM applications are stored.
    AZURE_STORAGE_K8S_DIRECTORY | Required | Azure storage container (name) where Kubernetes application manifests are stored.
 
-2. Run the sample application on the engine
+2. Run the sample application on the *engine*
 
    Refer to the command snippet below to build and run the sample application.
    ```
