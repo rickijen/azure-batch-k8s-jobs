@@ -29,7 +29,7 @@ This GitHub project
 
 ## Functional Architecture
 
-![alt tag](./images/azure-batch-k8s-jobs.png)
+![alt tag](./images/azure-batch-k8s-jobs.jpg)
 
 ## Resources
 
